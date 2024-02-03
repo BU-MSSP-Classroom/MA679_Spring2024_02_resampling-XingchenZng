@@ -1,6 +1,6 @@
 ---
 title: "Resampling"
-author: "Your Name Here"
+author: "Xingchen Zhang"
 date: "2022-12-30"
 output: html_document
 ---
@@ -64,8 +64,20 @@ ames_raw_2009=ames_raw[ames_raw$`Yr Sold`>=2008,]
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(boot)
+lm_model <- lm(SalePrice ~ `Gr Liv Area` + `Garage Area` + `Total Bsmt SF`, data = ames_raw_2008)
+se_bootstrap <- function(data, indices) {
+  sample_data <- data[indices, ]
+  model <- lm(`SalePrice` ~ `Gr Liv Area` + `Garage Area` + `Total Bsmt SF`, data = sample_data)
+  return(coef(summary(model))[, "Std. Error"])
+}
+set.seed(123) 
+bootstrap_results <- boot(data = ames_raw_2008, statistic = se_bootstrap, R = 1000)
+print("Bootstrap Standard Error Estimates:")
+print(bootstrap_results$t)
+print("Model-Based Standard Error Estimates:")
+print(coef(summary(lm_model))[, "Std. Error"])
+
 ```
 
 Your answer:
@@ -82,14 +94,21 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(caret)
+lm_model <- lm(SalePrice ~ `Gr Liv Area` + `Garage Area` + `Total Bsmt SF`, data = ames_raw_2008)
+preprocess_recipe <- recipe(SalePrice ~ `Gr Liv Area` + `Garage Area` + `Total Bsmt SF`, data = ames_raw_2008)
+cv_control <- trainControl(method = "cv", number = 10)
+cv_results_lm <- train(preprocess_recipe, data = ames_raw_2008, method = "lm",
+                       trControl = cv_control)
+print("Linear Regression Cross-Validation Results:")
+print(summary(cv_results_lm))
+
 ```
 
 Your answer:
 
 ~~~
-Please write your answer in full sentences.
+I think it holds true for future data. 
 
 
 ~~~
@@ -100,8 +119,7 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+
 ```
 
 Your answer:
@@ -159,7 +177,8 @@ Your code:
 Your answer:
 
 ~~~
-Please write your answer in full sentences.
+The result represents the empirical probability that the fourth observation is contained in a bootstrap sample of size 100.
+It provides an estimate of the proportion of bootstrap samples that include the fourth observation.
 
 
 ~~~
@@ -183,14 +202,15 @@ used to generate the data in equation form.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+
+
 ```
 
 Your answer:
 
 ~~~
-Please write your answer in full sentences.
+n is 100. p is 1.
+$y=x-2x^2+\epsilon$
 
 
 ~~~
@@ -202,8 +222,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+plot(x, y, main = "Scatterplot of X against Y", 
+     xlab = "X", ylab = "Y", pch = 16, col = "blue")
 ```
 
 Your answer:
@@ -228,8 +248,7 @@ to create a single data set containing both $X$ and $Y$ .
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+
 ```
 
 Your answer:
@@ -307,8 +326,11 @@ In Chapter 4, we used logistic regression to predict the probability of default 
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(ISLR)
+set.seed(123)
+model <- glm(default ~ income + balance, data = Default, family = "binomial")
+summary(model)
+
 ```
 
 Your answer:
@@ -327,8 +349,12 @@ i. Split the sample set into a training set and a validation set.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+n <- nrow(Default)
+set.seed(456)
+train_indices <- sample(1:n, 0.7 * n)
+train_set <- Default[train_indices, ]
+validation_set <- Default[-train_indices, ]
+
 ```
 
 Your answer:
@@ -344,8 +370,9 @@ ii. Fit a multiple logistic regression model using only the training observation
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+training_model <- glm(default ~ income + balance, data = train_set, family = "binomial")
+summary(training_model)
+
 ```
 
 Your answer:
@@ -363,8 +390,10 @@ iii. Obtain a prediction of default status for each individual in the validation
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+validation_probabilities <- predict(training_model, newdata = validation_set, type = "response")
+validation_predictions <- ifelse(validation_probabilities > 0.5, "Yes", "No")
+validation_results <- data.frame(Actual = validation_set$default, Predicted = validation_predictions)
+
 ```
 
 Your answer:
@@ -381,8 +410,8 @@ iv. Compute the validation set error, which is the fraction of the observations 
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+misclassification_rate <- mean(validation_results$Actual != validation_results$Predicted)
+cat("Validation Set Error:", misclassification_rate, "\n")
 ```
 
 Your answer:
@@ -400,8 +429,21 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(123)
+num_repetitions <- 3
+for (i in 1:num_repetitions) {
+  set.seed(123 + i)  
+  train_indices <- sample(1:n, 0.7 * n)  
+  train_set <- Default[train_indices, ]
+  validation_set <- Default[-train_indices, ]
+  training_model <- glm(default ~ income + balance, data = train_set, family = "binomial")
+  validation_probabilities <- predict(training_model, newdata = validation_set, type = "response")
+  validation_predictions <- ifelse(validation_probabilities > 0.5, "Yes", "No")
+  validation_results <- data.frame(Actual = validation_set$default, Predicted = validation_predictions)
+  misclassification_rate <- mean(validation_results$Actual != validation_results$Predicted)
+  cat("Validation Set Error (Iteration", i, "):", misclassification_rate, "\n")
+}
+
 ```
 
 Your answer:
@@ -419,14 +461,24 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(123)
+train_indices <- sample(1:n, 0.7 * n) 
+train_set <- Default[train_indices, ]
+validation_set <- Default[-train_indices, ]
+training_model <- glm(default ~ income + balance + student, data = train_set, family = "binomial")
+validation_probabilities <- predict(training_model, newdata = validation_set, type = "response")
+validation_predictions <- ifelse(validation_probabilities > 0.5, "Yes", "No")
+validation_results <- data.frame(Actual = validation_set$default, Predicted = validation_predictions)
+misclassification_rate <- mean(validation_results$Actual != validation_results$Predicted)
+cat("Validation Set Error:", misclassification_rate, "\n")
+
+
 ```
 
 Your answer:
 
 ~~~
-Please write your answer in full sentences.
+The dummy variable for student leads to a reduction in the test error rate based on the obtained validation set error.
 
 
 ~~~
@@ -441,8 +493,13 @@ We continue to consider the use of a logistic regression model to predict the pr
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+
+set.seed(123)
+
+logistic_model <- glm(default ~ income + balance, data = Default, family = "binomial")
+
+summary(logistic_model)
+
 ```
 
 Your answer:
@@ -459,8 +516,13 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+boot.fn <- function(data, indices) {
+  subset_data <- data[indices, ]
+  
+  logistic_model <- glm(default ~ income + balance, data = subset_data, family = "binomial")
+  
+  return(coefficients(logistic_model))
+}
 ```
 
 Your answer:
@@ -477,8 +539,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+
+
 ```
 
 Your answer:
@@ -510,8 +572,10 @@ We will now consider the Boston housing data set, from the ISLR2 library.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(ISLR2)
+mu_hat <- mean(Boston$medv)
+mu_hat
+
 ```
 
 Your answer:
@@ -529,8 +593,12 @@ Hint: We can compute the standard error of the sample mean by dividing the sampl
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+n <- length(Boston$medv) 
+s <- sd(Boston$medv) 
+
+se_mu_hat <- s / sqrt(n)
+se_mu_hat
+
 ```
 
 Your answer:
@@ -547,8 +615,12 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+B <- 1000
+set.seed(123)
+boot_means <- replicate(B, mean(sample(Boston$medv, replace = TRUE)))
+se_boot_mu_hat <- sd(boot_means)
+se_boot_mu_hat
+
 ```
 
 Your answer:
@@ -565,8 +637,11 @@ Hint: You can approximate a 95% confidence interval using the formula $[\hat{\mu
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+ci_lower <- mu_hat - 2 * se_boot_mu_hat
+ci_upper <- mu_hat + 2 * se_boot_mu_hat
+t_test_result <- t.test(Boston$medv)
+ci_t_test <- t_test_result$conf.int
+
 ```
 
 Your answer:
@@ -583,8 +658,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+mu_med_hat <- median(Boston$medv)
+mu_med_hat
 ```
 
 Your answer:
@@ -601,8 +676,10 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+B <- 1000
+boot_medians <- replicate(B, median(sample(Boston$medv, replace = TRUE)))
+se_boot_mu_med_hat <- sd(boot_medians)
+se_boot_mu_med_hat
 ```
 
 Your answer:
@@ -620,8 +697,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+mu_0.1_hat <- quantile(Boston$medv, 0.1)
+mu_0.1_hat
 ```
 
 Your answer:
@@ -638,8 +715,11 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+B <- 1000
+set.seed(123)
+boot_10th_percentiles <- replicate(B, quantile(sample(Boston$medv, replace = TRUE), 0.1))
+se_boot_mu_0.1_hat <- sd(boot_10th_percentiles)
+se_boot_mu_0.1_hat
 ```
 
 Your answer:
